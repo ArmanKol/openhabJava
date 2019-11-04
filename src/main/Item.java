@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.json.JSONObject;
@@ -85,7 +86,7 @@ public class Item {
 				writer.flush();
 				writer.close();
 				
-				System.out.println("Response Body : ");
+				log.log(Level.INFO, "Response Body : ");
 				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
 				String inputLine;
 				StringBuffer response = new StringBuffer();
@@ -95,13 +96,13 @@ public class Item {
 				}
 				in.close();
 				con.disconnect();
-				log.fine(response.toString());
+				log.log(Level.INFO, response.toString());
 			}catch(IOException e) {
-				log.fine(con.getResponseCode() + " CATCH");
+				log.log(Level.INFO,con.getResponseCode() + " CATCH");
 			}
 			
 		}else {
-			System.out.println("State is not valid use ON or OFF");
+			log.log(Level.INFO, "State is not valid use ON or OFF");
 		}
 	}
 	
