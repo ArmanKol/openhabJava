@@ -8,15 +8,23 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.json.JSONObject;
 
 public class Item {
-	private String link, name, label, type, category, state;
+	private String link;
+	private String name;
+	private String label;
+	private String type;
+	private String category;
+	private String state;
+	
 	private boolean editable;
-	private Logger log = Logger.getLogger(Item.class.getName());
+	private static final Logger LOG = Logger.getLogger(Item.class.getName());
 	
 	public Item(String link, String name, String label, String type, String category, String state, boolean editable) {
 		this.link = link;
@@ -29,7 +37,9 @@ public class Item {
 		
 	}
 	
-	public Item() {};
+	public Item() {
+		//Creates a Item object
+	};
 	
 	private HttpURLConnection initURLConnection(String item, String requestMethod) {
 		try {
@@ -40,7 +50,7 @@ public class Item {
 				url = new URL("http://localhost:8080/rest/items/" + item);
 			}
 			HttpURLConnection con = (HttpURLConnection) url.openConnection();
-			con.setRequestMethod(requestMethod.toUpperCase());
+			con.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
 
 			return con;
 		}catch(Exception e) {
@@ -49,19 +59,20 @@ public class Item {
 	}
 	
 	public Item createItem(String itemName) {
+		BufferedReader bufferedReader;
+		String inputLine;
 		try {
-			BufferedReader in = new BufferedReader(
+			bufferedReader = new BufferedReader(
 					  new InputStreamReader(this.initURLConnection(itemName, "GET").getInputStream()));
-			String inputLine;
 			StringBuffer content = new StringBuffer();
 			
-			while ((inputLine = in.readLine()) != null) {
+			while ((inputLine = bufferedReader.readLine()) != null) {
 				content.append(inputLine);
 			}
-			in.close();
+			bufferedReader.close();
 			
 			//Parse to json
-			JSONObject json = new JSONObject(content.toString());
+			final JSONObject json = new JSONObject(content.toString());
 			
 			return new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
 					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
@@ -73,59 +84,66 @@ public class Item {
 	}
 	
 	public void changeState(String itemName, String state) throws IOException{
+		BufferedWriter writer = null;
+		HttpURLConnection con;
 		if(state.equals("ON") || state.equals("OFF")) {
-			HttpURLConnection con = this.initURLConnection(itemName, "POST");
+			con = this.initURLConnection(itemName, "POST");
 			con.setRequestProperty("mode", "no-cors");
 			con.setDoOutput(true);
 			con.setRequestProperty("Content-Type", "text/plain");
 			
 			try{
-				BufferedWriter writer = new BufferedWriter(
+				writer = new BufferedWriter(
 				        new OutputStreamWriter(con.getOutputStream(), "ascii"));
 				writer.write(state);
 				writer.flush();
-				writer.close();
 				
-				log.log(Level.INFO, "Response Body : ");
-				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+				LOG.log(Level.INFO, "Response Body : ");
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
 				String inputLine;
 				StringBuffer response = new StringBuffer();
 
-				while ((inputLine = in.readLine()) != null) {
+				while ((inputLine = bufferedReader.readLine()) != null) {
 				    response.append(inputLine);
 				}
-				in.close();
+				bufferedReader.close();
 				con.disconnect();
-				log.log(Level.INFO, response.toString());
+				LOG.log(Level.INFO, response.toString());
 			}catch(IOException e) {
-				log.log(Level.INFO,con.getResponseCode() + " CATCH");
+				LOG.log(Level.INFO,con.getResponseCode() + " CATCH");
+			}finally {
+				writer.close();
 			}
 			
 		}else {
-			log.log(Level.INFO, "State is not valid use ON or OFF");
+			LOG.log(Level.INFO, "State is not valid use ON or OFF");
 		}
 	}
 	
-	public ArrayList<Item> getAllItems(){
-		ArrayList<Item> items = new ArrayList<>();
+	/*
+	 * This method returns all items that's configured in OpenHAB
+	 */
+	public List<Item> getAllItems(){
+		ArrayList<Item>  items = new ArrayList<>();
 		JSONObject json;
 		Item item;
-		HttpURLConnection con = this.initURLConnection(null, "GET");
+		String[] parts;
+		final HttpURLConnection con = this.initURLConnection(null, "GET");
 	    try {
 	    	StringBuilder result = new StringBuilder();
-	    	BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
+	    	BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
 		    String line;
-	    	while ((line = rd.readLine()) != null) {
+	    	while ((line = bufferedReader.readLine()) != null) {
 	    		result.append(line);
 	    	}
-	    	rd.close();
+	    	bufferedReader.close();
 	    	
 	    	//REMOVE brackets[]
 	    	String newItemsString;
 	    	newItemsString = result.toString().substring(1, result.toString().length() -1);
 	    	
 	    	//SPLIT STRING
-	    	String[] parts = newItemsString.split("},");
+	    	parts = newItemsString.split("},");
 	    	
 	    	//ADD CURLY BRACKETS {
 	    	for(int x=0; x < parts.length; x++) {
@@ -137,14 +155,14 @@ public class Item {
 						json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 	    		items.add(item);
 	    	}
-	    	return items;
 	    	
-	      }catch(Exception e) {
-	    	  e.printStackTrace();
-	    	  return null;
+	      }catch(IOException e) {
+	    	  LOG.log(Level.INFO ,e.getMessage());
 	      }
+	    return items;
 	}
 	
+	@Override
 	public String toString() {
 		return "{link: "+this.link+", name: "+name+", label: "+label+", type: "+type+", category: "+category+", state: "+state+", editable: "+editable+"}";
 	}
