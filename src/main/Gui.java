@@ -3,19 +3,14 @@ package main;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
 public class Gui {
-	private final Item item = new Item(); // item.getAllItems() used in createLabels @author Arman Koldaguc
+	private final Item item = new Item(); // item.getAllItems() used in createLabels
 	private final JFrame mainFrame = new JFrame(); // Creates the GUI window
-	private static final Logger LOG = Logger.getLogger(Gui.class.getName()); // Used for logging
-	
+
 	public Gui() {
 		final GridLayout layout = new GridLayout(0,3);
 		this.mainFrame.setLayout(layout);
@@ -28,6 +23,9 @@ public class Gui {
 	}
 	
 	
+	/*
+	 * This method creates all the labels for all the items that is configured in openHab. The label has the item name and a on and off button.
+	 */
 	public void createLabels() {
 		JLabel text;
 		JButton buttonOn;

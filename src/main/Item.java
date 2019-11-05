@@ -41,12 +41,13 @@ public class Item {
 		//Creates a Item object
 	}
 	
+	
 	public Item(String itemName) {
 		createItem(itemName);
 	}
 	
 	/*
-	 * 
+	 * This method creates a connection to the rest API of openHAB
 	 */
 	private HttpURLConnection initURLConnection(String item, String requestMethod) {
 		try {
@@ -114,6 +115,7 @@ public class Item {
 				writer.write(state);
 				writer.flush();
 				
+				//BufferedReader is needed to get the response message but it somehow returns null
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
 				bufferedReader.close();
 				
