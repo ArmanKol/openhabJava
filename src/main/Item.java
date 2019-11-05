@@ -22,7 +22,6 @@ public class Item {
 	private String type;
 	private String category;
 	private String state;
-	
 	private boolean editable;
 	private static final Logger LOG = Logger.getLogger(Item.class.getName());
 	
@@ -50,6 +49,7 @@ public class Item {
 	 * This method creates a connection to the rest API of openHAB
 	 */
 	private HttpURLConnection initURLConnection(String item, String requestMethod) {
+		HttpURLConnection con = null;
 		try {
 			URL url;
 			if(item == null) {
@@ -57,13 +57,13 @@ public class Item {
 			}else {
 				url = new URL("http://localhost:8080/rest/items/" + item);
 			}
-			HttpURLConnection con = (HttpURLConnection) url.openConnection();
+			con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
 
-			return con;
 		}catch(Exception e) {
-			return null;
+			LOG.log(Level.SEVERE, e.getStackTrace().toString());
 		}
+		return con;
 	}
 	
 	/*
@@ -89,8 +89,7 @@ public class Item {
 			item = new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
 					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 		}catch(IOException e) {
-			e.printStackTrace();
-			return null;
+			LOG.log(Level.SEVERE, "getOutputStream throws IOException");
 		}
 		return item;
 		
@@ -123,11 +122,11 @@ public class Item {
 				writer.close();
 				con.disconnect();
 			}catch(IOException e) {
-				LOG.log(Level.INFO, "IOException");
+				LOG.log(Level.SEVERE, "getOutputStream throws IOException");
 			}
 			
 		}else {
-			LOG.log(Level.INFO, "State is not valid use ON or OFF");
+			LOG.log(Level.SEVERE, "State is not valid use ON or OFF");
 		}
 	}
 	
@@ -168,7 +167,7 @@ public class Item {
 	    	}
 	    	
 	      }catch(IOException e) {
-	    	  LOG.log(Level.INFO ,e.getMessage());
+	    	  LOG.log(Level.SEVERE , "getInputStream() threw a IOException");
 	      }
 	    return items;
 	}
