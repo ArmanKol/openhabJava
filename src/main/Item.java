@@ -39,8 +39,15 @@ public class Item {
 	
 	public Item() {
 		//Creates a Item object
-	};
+	}
 	
+	public Item(String itemName) {
+		createItem(itemName);
+	}
+	
+	/*
+	 * 
+	 */
 	private HttpURLConnection initURLConnection(String item, String requestMethod) {
 		try {
 			URL url;
@@ -58,9 +65,13 @@ public class Item {
 		}
 	}
 	
+	/*
+	 * Create an Item object with the specified item name
+	 */
 	public Item createItem(String itemName) {
 		BufferedReader bufferedReader;
 		String inputLine;
+		Item item = null;
 		try {
 			bufferedReader = new BufferedReader(
 					  new InputStreamReader(this.initURLConnection(itemName, "GET").getInputStream()));
@@ -74,19 +85,24 @@ public class Item {
 			//Parse to json
 			final JSONObject json = new JSONObject(content.toString());
 			
-			return new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
+			item = new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
 					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 		}catch(IOException e) {
 			e.printStackTrace();
 			return null;
 		}
+		return item;
 		
 	}
 	
-	public void changeState(String itemName, String state) throws IOException{
-		BufferedWriter writer = null;
+	/*
+	 * This method lets you change the state of an item. example: turn a light on or off
+	 */
+	public void changeState(String itemName, String state){
+		BufferedWriter writer;
 		HttpURLConnection con;
 		if(state.equals("ON") || state.equals("OFF")) {
+			
 			con = this.initURLConnection(itemName, "POST");
 			con.setRequestProperty("mode", "no-cors");
 			con.setDoOutput(true);
@@ -98,21 +114,14 @@ public class Item {
 				writer.write(state);
 				writer.flush();
 				
-				LOG.log(Level.INFO, "Response Body : ");
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer response = new StringBuffer();
-
-				while ((inputLine = bufferedReader.readLine()) != null) {
-				    response.append(inputLine);
-				}
 				bufferedReader.close();
-				con.disconnect();
-				LOG.log(Level.INFO, response.toString());
-			}catch(IOException e) {
-				LOG.log(Level.INFO,con.getResponseCode() + " CATCH");
-			}finally {
+				
+				LOG.log(Level.INFO,itemName + ":"+state);
 				writer.close();
+				con.disconnect();
+			}catch(IOException e) {
+				LOG.log(Level.INFO, "IOException");
 			}
 			
 		}else {
@@ -160,6 +169,10 @@ public class Item {
 	    	  LOG.log(Level.INFO ,e.getMessage());
 	      }
 	    return items;
+	}
+	
+	public String getName() {
+		return this.name;
 	}
 	
 	@Override
