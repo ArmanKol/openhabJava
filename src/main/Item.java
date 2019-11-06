@@ -67,7 +67,7 @@ public class Item {
 	public Item createItemFromItemName(String itemName) {
 		BufferedReader bufferedReader;
 		String inputLine;
-		Item item = null;
+		Item item = new Item();
 		try {
 			this.connection = this.initURLConnection(itemName, "GET", true);
 			
