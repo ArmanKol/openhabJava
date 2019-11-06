@@ -24,6 +24,7 @@ public class Item {
 	private String state;
 	private boolean editable;
 	private static final Logger LOG = Logger.getLogger(Item.class.getName());
+	private HttpURLConnection connection;
 	
 	public Item(String link, String name, String label, String type, String category, String state, boolean editable) {
 		this.link = link;
@@ -39,43 +40,43 @@ public class Item {
 	public Item() {
 		//Creates a Item object
 	}
-	
-	
-	public Item(String itemName) {
-		createItem(itemName);
-	}
-	
+
 	/*
 	 * This method creates a connection to the rest API of openHAB
 	 */
-	private HttpURLConnection initURLConnection(String item, String requestMethod) {
-		HttpURLConnection con = null;
+	public HttpURLConnection initURLConnection(String item, String requestMethod, boolean getOneItem) {
 		try {
 			URL url;
-			if(item == null) {
+			if(!getOneItem) {
 				url = new URL("http://localhost:8080/rest/items/");
 			}else {
 				url = new URL("http://localhost:8080/rest/items/" + item);
 			}
-			con = (HttpURLConnection) url.openConnection();
-			con.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
-
-		}catch(Exception e) {
+			
+			connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
+		}catch(IOException e) {
 			LOG.log(Level.SEVERE, e.getStackTrace().toString());
 		}
-		return con;
+		return connection;
 	}
 	
 	/*
-	 * Create an Item object with the specified item name
+	 * Maak een item object aan waarbij de itemnaam is meegegeven van een item in openHab.
 	 */
-	public Item createItem(String itemName) {
+	public Item createItemFromItemName(String itemName) {
 		BufferedReader bufferedReader;
 		String inputLine;
 		Item item = null;
 		try {
+			this.connection = this.initURLConnection(itemName, "GET", true);
+			
+			if(connection.getResponseCode() == 404) {
+				throw new NullPointerException();
+			}
+			
 			bufferedReader = new BufferedReader(
-					  new InputStreamReader(this.initURLConnection(itemName, "GET").getInputStream()));
+					  new InputStreamReader(this.connection.getInputStream()));
 			StringBuffer content = new StringBuffer();
 			
 			while ((inputLine = bufferedReader.readLine()) != null) {
@@ -88,74 +89,87 @@ public class Item {
 			
 			item = new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
 					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
+			
+			
+			connection.disconnect();
 		}catch(IOException e) {
-			LOG.log(Level.SEVERE, "getOutputStream throws IOException");
+			LOG.log(Level.SEVERE, "getOutputStream throws IOException. Check of de opgegeven itemNaam bestaat.");
+		}catch(NullPointerException e) {
+			LOG.log(Level.SEVERE, "NullPointerException. Check of de opgegeven itemNaam bestaat.");
 		}
 		return item;
 		
 	}
-	
+
 	/*
-	 * This method lets you change the state of an item. example: turn a light on or off
+	 * Met deze methode kun je de status van een item aanpassen in openHab. bijvoorbeeld: het licht aan of uit zetten.
 	 */
 	public void changeState(String itemName, String state){
 		BufferedWriter writer;
-		HttpURLConnection con;
 		if(state.equals("ON") || state.equals("OFF")) {
-			
-			con = this.initURLConnection(itemName, "POST");
-			con.setRequestProperty("mode", "no-cors");
-			con.setDoOutput(true);
-			con.setRequestProperty("Content-Type", "text/plain");
-			
+			if(this.getState() != null) {
+				this.setState(state);
+			}
 			try{
-				writer = new BufferedWriter(
-				        new OutputStreamWriter(con.getOutputStream(), "ascii"));
+				this.connection = this.initURLConnection(itemName, "POST", true);
+				this.connection.setRequestProperty("mode", "no-cors");
+				this.connection.setDoOutput(true);
+				this.connection.setRequestProperty("Content-Type", "text/plain");
+				
+				writer = new BufferedWriter(new OutputStreamWriter(this.connection.getOutputStream(), "ascii"));
 				writer.write(state);
 				writer.flush();
 				
-				//BufferedReader is needed to get the response message but it somehow returns null
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
+				if(this.connection.getResponseCode() == 404) {
+					throw new NullPointerException();
+				}
+				
+				//BufferedReader is noodzakelijk voor de response bericht. 
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.connection.getInputStream()));
 				bufferedReader.close();
 				
 				LOG.log(Level.INFO,itemName + ":"+state);
+				
 				writer.close();
-				con.disconnect();
+				this.connection.disconnect();
 			}catch(IOException e) {
-				LOG.log(Level.SEVERE, "getOutputStream throws IOException");
+				LOG.log(Level.SEVERE, "IOException: Geen outputstream gevonden. Check of de itemNaam klopt");
+			}catch(NullPointerException e) {
+				LOG.log(Level.SEVERE, "NullPointerException: Check of de opgegeven itemNaam klopt");
 			}
 			
 		}else {
-			LOG.log(Level.SEVERE, "State is not valid use ON or OFF");
+			System.out.println(this.connection);
+			LOG.log(Level.SEVERE, "Een State moet ON of OFF zijn");
 		}
 	}
 	
 	/*
-	 * This method returns all items that's configured in OpenHAB
+	 * Deze methode returned alle items in een lijst die geconfigureerd zijn in openHab.
 	 */
 	public List<Item> getAllItems(){
 		ArrayList<Item>  items = new ArrayList<>();
 		JSONObject json;
 		Item item;
 		String[] parts;
-		final HttpURLConnection con = this.initURLConnection(null, "GET");
 	    try {
+	    	this.connection = this.initURLConnection(null, "GET", false);
 	    	StringBuilder result = new StringBuilder();
-	    	BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
+	    	BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.connection.getInputStream()));
 		    String line;
 	    	while ((line = bufferedReader.readLine()) != null) {
 	    		result.append(line);
 	    	}
 	    	bufferedReader.close();
 	    	
-	    	//REMOVE brackets[]
+	    	//VERWIJDER brackets[]
 	    	String newItemsString;
 	    	newItemsString = result.toString().substring(1, result.toString().length() -1);
 	    	
 	    	//SPLIT STRING
 	    	parts = newItemsString.split("},");
 	    	
-	    	//ADD CURLY BRACKETS {
+	    	//VOEG CURLY BRACKETS TOE{
 	    	for(int x=0; x < parts.length; x++) {
 	    		if(x < parts.length -1) {
 	    			parts[x]+="}";
@@ -165,15 +179,50 @@ public class Item {
 						json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 	    		items.add(item);
 	    	}
-	    	
+	    	this.connection.disconnect();
 	      }catch(IOException e) {
-	    	  LOG.log(Level.SEVERE , "getInputStream() threw a IOException");
+	    	  LOG.log(Level.SEVERE , "getInputStream() throws IOException");
 	      }
 	    return items;
 	}
 	
+	/*
+	 * Gebruik alleen voor Unit testen!
+	 */
+	public HttpURLConnection getConnection() {
+		return this.connection;
+	}
+	
+	public String getLink() {
+		return this.link;
+	}
+	
 	public String getName() {
 		return this.name;
+	}
+	
+	public String getLabel() {
+		return this.label;
+	}
+	
+	public String getType() {
+		return this.type;
+	}
+	
+	public String getCategory() {
+		return this.category;
+	}
+	
+	public String getState() {
+		return this.state;
+	}
+	
+	public boolean isEditable() {
+		return this.editable;
+	}
+	
+	public void setState(String state) {
+		this.state = state;
 	}
 	
 	@Override

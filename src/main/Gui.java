@@ -10,10 +10,9 @@ import javax.swing.JLabel;
 public class Gui {
 	private final Item item = new Item(); // item.getAllItems() used in createLabels
 	private final JFrame mainFrame = new JFrame(); // Creates the GUI window
-
+	private final GridLayout layout = new GridLayout(0,3);
 	public Gui() {
-		final GridLayout layout = new GridLayout(0,3);
-		this.mainFrame.setLayout(layout);
+		this.mainFrame.setLayout(this.layout);
 		
 		createLabels();
 		
@@ -22,11 +21,10 @@ public class Gui {
 		this.mainFrame.setVisible(true);
 	}
 	
-	
 	/*
 	 * This method creates all the labels for all the items that is configured in openHab. The label has the item name and a on and off button.
 	 */
-	public void createLabels() {
+	private void createLabels() {
 		JLabel text;
 		JButton buttonOn;
 		JButton buttonOff;
