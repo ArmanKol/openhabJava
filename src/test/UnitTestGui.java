@@ -25,6 +25,7 @@ public class UnitTestGui {
 	@Test
 	public void createItemEqual() {
 		Item item = new Item().createItemFromItemName("lamp");
+		System.out.println(item);
 		assertEquals(new Item(), item);
 	}
 	
@@ -34,6 +35,7 @@ public class UnitTestGui {
 	@Test
 	public void createItemNotEqual() {
 		Item item = new Item().createItemFromItemName("lamp_woonkamer");
+		System.out.println(item);
 		assertNotEquals(new Item(), item);
 	}
 	
@@ -45,6 +47,7 @@ public class UnitTestGui {
 		String testState = "OFN";
 		Item testItem = new Item().createItemFromItemName("lamp_woonkamer");
 		testItem.changeState(testItem.getName(), testState);
+		System.out.println(testItem.getState());
 		assertNotEquals(testItem.getState(), testState);
 	}
 	
@@ -53,9 +56,10 @@ public class UnitTestGui {
 	 */
 	@Test
 	public void validState_changeState() {
-		String testState = "ON";
+		String testState = "OFF";
 		Item testItem = new Item().createItemFromItemName("lamp_woonkamer");
 		testItem.changeState(testItem.getName(), testState);
+		System.out.println(testItem.getState());
 		assertEquals(testItem.getState(), testState);
 		
 	}
