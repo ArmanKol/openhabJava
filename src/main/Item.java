@@ -24,7 +24,7 @@ public class Item {
 	private String state;
 	private boolean editable;
 	private static final Logger LOG = Logger.getLogger(Item.class.getName());
-	private HttpURLConnection connection;
+	private static HttpURLConnection connection;
 	
 	public Item(String link, String name, String label, String type, String category, String state, boolean editable) {
 		this.link = link;
@@ -45,6 +45,8 @@ public class Item {
 	 * This method creates a connection to the rest API of openHAB
 	 */
 	public HttpURLConnection initURLConnection(String item, String requestMethod, boolean getOneItem) {
+		HttpURLConnection temporaryConnection;
+		int succesResponse = 200;
 		try {
 			URL url;
 			if(!getOneItem) {
@@ -53,10 +55,14 @@ public class Item {
 				url = new URL("http://localhost:8080/rest/items/" + item);
 			}
 			
-			connection = (HttpURLConnection) url.openConnection();
-			connection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
+			temporaryConnection = (HttpURLConnection) url.openConnection();
+			temporaryConnection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
+			
+			if(temporaryConnection.getResponseCode() == succesResponse) {
+				this.setConnection(temporaryConnection);
+			}
 		}catch(IOException e) {
-			LOG.log(Level.SEVERE, e.getStackTrace().toString());
+			LOG.log(Level.SEVERE, e.getMessage());
 		}
 		return connection;
 	}
@@ -69,15 +75,11 @@ public class Item {
 		String inputLine;
 		Item item = new Item();
 		try {
-			this.connection = this.initURLConnection(itemName, "GET", true);
-			
-			if(connection.getResponseCode() == 404) {
-				throw new NullPointerException();
-			}
+			Item.connection = this.initURLConnection(itemName, "GET", true);
 			
 			bufferedReader = new BufferedReader(
-					  new InputStreamReader(this.connection.getInputStream()));
-			StringBuffer content = new StringBuffer();
+					  new InputStreamReader(connection.getInputStream()));
+			final StringBuffer content = new StringBuffer();
 			
 			while ((inputLine = bufferedReader.readLine()) != null) {
 				content.append(inputLine);
@@ -90,12 +92,9 @@ public class Item {
 			item = new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
 					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 			
-			
 			connection.disconnect();
 		}catch(IOException e) {
 			LOG.log(Level.SEVERE, "getOutputStream throws IOException. Check of de opgegeven itemNaam bestaat.");
-		}catch(NullPointerException e) {
-			LOG.log(Level.SEVERE, "NullPointerException. Check of de opgegeven itemNaam bestaat.");
 		}
 		return item;
 		
@@ -106,40 +105,38 @@ public class Item {
 	 */
 	public void changeState(String itemName, String state){
 		BufferedWriter writer;
-		if(state.equals("ON") || state.equals("OFF")) {
+		String stateOn = "ON";
+		String stateOff = "OFF";
+		
+		if((stateOn.equals(state) || stateOff.equals(state)) && this.getName().equals(itemName)) {
 			if(this.getState() != null) {
 				this.setState(state);
 			}
 			try{
-				this.connection = this.initURLConnection(itemName, "POST", true);
-				this.connection.setRequestProperty("mode", "no-cors");
-				this.connection.setDoOutput(true);
-				this.connection.setRequestProperty("Content-Type", "text/plain");
+				Item.connection = this.initURLConnection(itemName, "POST", true);
+				connection.setRequestProperty("mode", "no-cors");
+				connection.setDoOutput(true);
+				connection.setRequestProperty("Content-Type", "text/plain");
 				
-				writer = new BufferedWriter(new OutputStreamWriter(this.connection.getOutputStream(), "ascii"));
+				writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), "ascii"));
 				writer.write(state);
 				writer.flush();
 				
-				if(this.connection.getResponseCode() == 404) {
-					throw new NullPointerException();
-				}
-				
 				//BufferedReader is noodzakelijk voor de response bericht. 
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.connection.getInputStream()));
+				final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 				bufferedReader.close();
 				
-				LOG.log(Level.INFO,itemName + ":"+state);
+				if(LOG.isLoggable(Level.INFO)) {
+					LOG.log(Level.INFO,itemName + ":"+state);
+				}
 				
 				writer.close();
-				this.connection.disconnect();
+				connection.disconnect();
 			}catch(IOException e) {
 				LOG.log(Level.SEVERE, "IOException: Geen outputstream gevonden. Check of de itemNaam klopt");
-			}catch(NullPointerException e) {
-				LOG.log(Level.SEVERE, "NullPointerException: Check of de opgegeven itemNaam klopt");
 			}
 			
 		}else {
-			System.out.println(this.connection);
 			LOG.log(Level.SEVERE, "Een State moet ON of OFF zijn");
 		}
 	}
@@ -151,11 +148,10 @@ public class Item {
 		ArrayList<Item>  items = new ArrayList<>();
 		JSONObject json;
 		Item item;
-		String[] parts;
 	    try {
-	    	this.connection = this.initURLConnection(null, "GET", false);
+	    	connection = this.initURLConnection(null, "GET", false);
 	    	StringBuilder result = new StringBuilder();
-	    	BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.connection.getInputStream()));
+	    	final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 		    String line;
 	    	while ((line = bufferedReader.readLine()) != null) {
 	    		result.append(line);
@@ -167,7 +163,7 @@ public class Item {
 	    	newItemsString = result.toString().substring(1, result.toString().length() -1);
 	    	
 	    	//SPLIT STRING
-	    	parts = newItemsString.split("},");
+	    	String [] parts = newItemsString.split("},");
 	    	
 	    	//VOEG CURLY BRACKETS TOE{
 	    	for(int x=0; x < parts.length; x++) {
@@ -179,7 +175,7 @@ public class Item {
 						json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
 	    		items.add(item);
 	    	}
-	    	this.connection.disconnect();
+	    	connection.disconnect();
 	      }catch(IOException e) {
 	    	  LOG.log(Level.SEVERE , "getInputStream() throws IOException");
 	      }
@@ -190,7 +186,7 @@ public class Item {
 	 * Gebruik alleen voor Unit testen!
 	 */
 	public HttpURLConnection getConnection() {
-		return this.connection;
+		return Item.connection;
 	}
 	
 	public String getLink() {
@@ -221,10 +217,38 @@ public class Item {
 		return this.editable;
 	}
 	
+	public void setLink(String link) {
+		this.link = link;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public void setCategory(String category) {
+		this.category = category;
+	}
+
 	public void setState(String state) {
 		this.state = state;
 	}
-	
+
+	public void setEditable(boolean editable) {
+		this.editable = editable;
+	}
+
+	public void setConnection(HttpURLConnection connection) {
+		Item.connection = connection;
+	}
+
 	@Override
 	public String toString() {
 		return "{link: "+this.link+", name: "+name+", label: "+label+", type: "+type+", category: "+category+", state: "+state+", editable: "+editable+"}";
