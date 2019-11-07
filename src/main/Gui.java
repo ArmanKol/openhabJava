@@ -7,6 +7,9 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
+/*
+ * Dit is de gui class. Dit creëert een gui
+ */
 public class Gui {
 	private final Item item = new Item(); // item.getAllItems() gebruikt in createLabels
 	private final JFrame mainFrame = new JFrame(); // Maakt de GUI scherm aan

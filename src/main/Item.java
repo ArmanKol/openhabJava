@@ -15,6 +15,9 @@ import java.util.logging.Logger;
 
 import org.json.JSONObject;
 
+/*
+ * Dit is een item object. Via openhab wordt een item opgehaald en als json ontvangen deze class kan dat json object omzetten naar een item object in java
+ */
 public class Item {
 	private String link;
 	private String name;
@@ -58,12 +61,12 @@ public class Item {
 			temporaryConnection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
 			
 			final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(temporaryConnection.getInputStream()));
-			
+
 			if(bufferedReader != null) {
 				this.setConnection(temporaryConnection);
 			}
 		}catch(IOException e) {
-			LOG.log(Level.SEVERE, e.getMessage());
+			LOG.log(Level.SEVERE, e.getMessage()+ " bestaat niet of je heb de verkeerde requestMethod gebruikt");
 		}
 		return connection;
 	}
