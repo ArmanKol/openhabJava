@@ -40,8 +40,12 @@ public class Item {
 		
 	}
 	
+	public Item(String itemName) {
+		createItemFromItemName(itemName);
+	}
+	
 	public Item() {
-		//Creates a Item object
+		//Creates a empty Item object
 	}
 
 	/*
@@ -60,11 +64,7 @@ public class Item {
 			temporaryConnection = (HttpURLConnection) url.openConnection();
 			temporaryConnection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
 			
-			final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(temporaryConnection.getInputStream()));
-
-			if(bufferedReader != null) {
-				this.setConnection(temporaryConnection);
-			}
+			this.setConnection(temporaryConnection);
 		}catch(IOException e) {
 			LOG.log(Level.SEVERE, e.getMessage()+ " bestaat niet of je heb de verkeerde requestMethod gebruikt");
 		}
@@ -77,7 +77,7 @@ public class Item {
 	public Item createItemFromItemName(String itemName) {
 		BufferedReader bufferedReader;
 		String inputLine;
-		Item item = new Item();
+		//Item item = new Item();
 		try {
 			Item.connection = this.initURLConnection(itemName, "GET", true);
 			
@@ -93,14 +93,19 @@ public class Item {
 			//Parse to json
 			final JSONObject json = new JSONObject(content.toString());
 			
-			item = new Item(json.getString("link"), json.getString("name"), json.getString("label"), 
-					json.getString("type"), json.getString("category"), json.getString("state"), json.getBoolean("editable"));
-			
+			this.setLink(json.getString("link"));
+			this.setName(json.getString("name"));
+			this.setLabel(json.getString("label"));
+			this.setType(json.getString("type"));
+			this.setCategory(json.getString("category"));
+			this.setState(json.getString("state"));
+			this.setEditable( json.getBoolean("editable"));
+
 			connection.disconnect();
 		}catch(IOException e) {
 			LOG.log(Level.SEVERE, "getOutputStream throws IOException. Check of de opgegeven itemNaam bestaat.");
 		}
-		return item;
+		return this;
 		
 	}
 
@@ -112,7 +117,7 @@ public class Item {
 		String stateOn = "ON";
 		String stateOff = "OFF";
 		
-		if((stateOn.equals(state) || stateOff.equals(state)) && this.getName().equals(itemName)) {
+		if((stateOn.equals(state) || stateOff.equals(state))) {
 			if(this.getState() != null) {
 				this.setState(state);
 			}
@@ -252,6 +257,16 @@ public class Item {
 	public void setConnection(HttpURLConnection connection) {
 		Item.connection = connection;
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		boolean status = false;
+		Item item = (Item)obj;
+		if(this.getLink() == item.getLink()){
+			status = true;
+		}
+		return status;
+   }
 
 	@Override
 	public String toString() {

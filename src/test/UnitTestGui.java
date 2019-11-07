@@ -4,7 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 
 import org.junit.jupiter.api.Test;
@@ -13,70 +17,67 @@ import org.junit.jupiter.api.Test;
 import main.Item;
 
 public class UnitTestGui {
-	Item item = new Item();
+	Item mainItem = new Item();
 	 
-	/* createItem(String itemName)
-	 * Het aanmaken van een item object mag niet gebeuren als er een niet bestaand itemNaame mee wordt gegeven. 
+	/* createItemFromItemName(String itemName)
+	 * Het invullen van een item object mag niet gebeuren als er een niet bestaand itemNaam mee wordt gegeven. 
 	 */
 	@Test
-	public void createItemNull() {
-		assertNull("Niet bestaande itemName", item.createItemFromItemName("lamp"));
+	public void createItemEqual() {
+		Item item = new Item().createItemFromItemName("lamp");
+		assertEquals(new Item(), item);
 	}
 	
-	/* createItem(String itemName)
-	 * Het aanmaken van een item object mag wel gebeuren als er een bestaand itemNaame mee wordt gegeven.
+	/* createItemFromItemName(String itemName)
+	 * Het invullen van een item object mag wel gebeuren als er een bestaand itemNaam mee wordt gegeven.
 	 */
 	@Test
-	public void createItemNotNull() {
-		assertNotNull("Juiste itemName", item.createItemFromItemName("lamp_woonkamer"));
+	public void createItemNotEqual() {
+		Item item = new Item().createItemFromItemName("lamp_woonkamer");
+		assertNotEquals(new Item(), item);
 	}
 	
 	/* changeState(String itemName, String state)
-	 * Bij een verkeerde state zal er geen connectie gemaakt worden en dus zal getConnection() null teruggeven.
+	 * Bij een verkeerde state zal het item object de state niet aanpassen en nog steeds dezelfde oude state teruggeven.
 	 */
 	@Test
-	public void invalidState_changeState() {
+	public void invalidState_changeState() throws IOException {
+		String testState = "OFN";
 		Item testItem = new Item().createItemFromItemName("lamp_woonkamer");
-		testItem.changeState(testItem.getName(), "OFN");
-		assertEquals(testItem.getConnection(), null);
+		testItem.changeState(testItem.getName(), testState);
+		assertNotEquals(testItem.getState(), testState);
 	}
 	
 	/* changeState(String itemName, String state)
-	 * Bij een juiste state zal er een connectie gemaakt worden en dus zal getConnection() een HTTPURLConnection object teruggeven.
+	 * Bij een juiste state zal het item object de state aanpassen en de nieuwe state teruggeven.
 	 */
 	@Test
 	public void validState_changeState() {
+		String testState = "ON";
 		Item testItem = new Item().createItemFromItemName("lamp_woonkamer");
-		testItem.changeState(testItem.getName(), "ON");
-		
-		HttpURLConnection connection = null;
-		connection = this.item.initURLConnection(testItem.getName(), "POST", true);
-		connection.setRequestProperty("mode", "no-cors");
-		connection.setDoOutput(true);
-		connection.setRequestProperty("Content-Type", "text/plain");
-		
-		assertNotEquals(testItem.getConnection(), connection);
+		testItem.changeState(testItem.getName(), testState);
+		assertEquals(testItem.getState(), testState);
 		
 	}
 	
 	/* changeState(String itemName, String state)
-	 * Het testen van een itemnaam dat niet klopt moet een foutmelding geven.
+	 * Het testen van een itemnaam dat niet klopt geeft een response code van 404.
 	 */
-	@Test
-	public void invalidName_changeState() {
-		item.changeState("S", "ON");
-		assertNull(this.item.getConnection());
-		
+	@Test()
+	public void invalidName_changeState() throws IOException {
+		int responseCode = 404;
+		mainItem.changeState("S", "OFF");
+		assertTrue(mainItem.getConnection().getResponseCode() == responseCode);
 	}
 	
 	/* changeState(String itemName, String state)
-	 * Het testen van een itemnaam dat wel klopt.
+	 * Het testen van een itemnaam dat wel klopt geeft een response code van 200.
 	 */
 	@Test
-	public void validName_changeState() {
-		item.changeState("lamp_woonkamer", "OFF");
-		assertNotNull(this.item.getConnection());
-		
+	public void validName_changeState() throws IOException {
+		int responseCode = 200;
+		mainItem.changeState("lamp_woonkamer", "OFF");
+		assertTrue(mainItem.getConnection().getResponseCode() == responseCode);
 	}
 	
 	
