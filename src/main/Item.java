@@ -46,7 +46,6 @@ public class Item {
 	 */
 	public HttpURLConnection initURLConnection(String item, String requestMethod, boolean getOneItem) {
 		HttpURLConnection temporaryConnection;
-		int succesResponse = 200;
 		try {
 			URL url;
 			if(!getOneItem) {
@@ -58,7 +57,9 @@ public class Item {
 			temporaryConnection = (HttpURLConnection) url.openConnection();
 			temporaryConnection.setRequestMethod(requestMethod.toUpperCase(Locale.getDefault()));
 			
-			if(temporaryConnection.getResponseCode() == succesResponse) {
+			final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(temporaryConnection.getInputStream()));
+			
+			if(bufferedReader != null) {
 				this.setConnection(temporaryConnection);
 			}
 		}catch(IOException e) {
